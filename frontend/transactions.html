@@ -42,7 +42,10 @@
         <p>Filter, search, edit transactions, and manage receipts on Amazon S3</p>
       </div>
 
-      <div>
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <button class="btn btn-aws" onclick="loadExcelData()" title="Import all personal Excel sheet records into Amazon RDS">
+          ⚡ Load My Excel Data
+        </button>
         <button class="btn btn-primary" onclick="openAddModal()">
           + Add New Transaction
         </button>
@@ -273,7 +276,6 @@
   </footer>
 
   <script src="/js/api.js"></script>
-  <script src="/js/dashboard.js"></script>
   <script src="/js/transactions.js"></script>
 </body>
 </html>

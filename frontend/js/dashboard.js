@@ -51,22 +51,26 @@ async function loadDashboardData() {
  * Fetch and render top summary cards
  */
 async function loadSummaryCards() {
+  const incomeElem = document.getElementById('stat-income');
+  if (!incomeElem) return;
+
   try {
     const res = await apiFetch('/api/dashboard/summary');
     const data = res.data;
 
-    document.getElementById('stat-income').textContent = formatCurrency(data.totalIncome);
-    document.getElementById('stat-expense').textContent = formatCurrency(data.totalExpenses);
+    incomeElem.textContent = formatCurrency(data.totalIncome);
+    const expenseElem = document.getElementById('stat-expense');
+    if (expenseElem) expenseElem.textContent = formatCurrency(data.totalExpenses);
 
     const balanceElem = document.getElementById('stat-balance');
-    balanceElem.textContent = formatCurrency(data.currentBalance);
-    if (data.currentBalance < 0) {
-      balanceElem.style.color = 'var(--danger)';
-    } else {
-      balanceElem.style.color = 'var(--primary)';
+    if (balanceElem) {
+      balanceElem.textContent = formatCurrency(data.currentBalance);
+      balanceElem.style.color = data.currentBalance < 0 ? 'var(--danger)' : 'var(--primary)';
     }
 
-    document.getElementById('stat-count').textContent = data.transactionCount;
+    const countElem = document.getElementById('stat-count');
+    if (countElem) countElem.textContent = data.transactionCount;
+
     const receiptsElem = document.getElementById('stat-receipts');
     if (receiptsElem) {
       receiptsElem.textContent = `${data.receiptsStored} receipts stored in S3`;

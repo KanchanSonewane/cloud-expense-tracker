@@ -153,3 +153,19 @@ function formatDate(dateStr) {
     year: 'numeric',
   });
 }
+
+/**
+ * Bulk import user's Excel sheet data into Amazon RDS
+ */
+async function loadExcelData() {
+  try {
+    showToast('Importing your Excel data into Amazon RDS...', 'info');
+    const res = await apiFetch('/api/cloud/seed-excel', { method: 'POST' });
+    showToast(res.message, 'success');
+    setTimeout(() => {
+      window.location.reload();
+    }, 1200);
+  } catch (err) {
+    showToast(err.message || 'Failed to import Excel data.', 'error');
+  }
+}

@@ -44,7 +44,10 @@
         <p>Live transaction data served from Amazon RDS MySQL</p>
       </div>
 
-      <div style="display: flex; gap: 0.75rem;">
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <button class="btn btn-aws" onclick="loadExcelData()" title="Import all personal Excel sheet records into Amazon RDS">
+          ⚡ Load My Excel Data
+        </button>
         <button class="btn btn-primary" onclick="openModal('modal-add-transaction')">
           + Add Transaction
         </button>
