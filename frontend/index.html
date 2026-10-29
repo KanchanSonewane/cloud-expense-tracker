@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud-Based Expense Tracker | AWS Cloud Computing Lab</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%200%22%20100%22%20100%22><text y=%22.9em%22 font-size=%2290%22>☁️</text></svg>">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <a href="/" class="nav-brand">
+      <span>☁️ ExpenseTracker</span>
+      <span class="aws-badge">AWS Cloud Lab</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/login.html">Login</a></li>
+      <li><a href="/register.html" class="btn btn-aws btn-sm">Get Started</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div style="margin-bottom: 1rem;">
+      <span class="badge badge-category" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+        🎓 B.Tech CSE Cloud Computing Lab Mini Project
+      </span>
+    </div>
+    <h1>Cloud-Based Expense Tracker</h1>
+    <p>
+      A full-stack personal finance and expense management system architected on <strong>Amazon Web Services (AWS)</strong> using <strong>EC2</strong> for compute, <strong>RDS MySQL</strong> for database, <strong>S3</strong> for document storage, <strong>IAM</strong> for security, and <strong>VPC</strong> for network isolation.
+    </p>
+
+    <!-- Cloud Services Badges -->
+    <div class="cloud-services-pills">
+      <div class="cloud-pill">💻 <strong>Amazon EC2</strong> (Node.js Host)</div>
+      <div class="cloud-pill">🗄 <strong>Amazon RDS</strong> (MySQL Database)</div>
+      <div class="cloud-pill">☁ <strong>Amazon S3</strong> (Receipt Storage)</div>
+      <div class="cloud-pill">🕒 <strong>S3 Versioning</strong> (File Recovery)</div>
+      <div class="cloud-pill">🔒 <strong>AWS IAM & VPC</strong> (Security)</div>
+    </div>
+
+    <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+      <a href="/login.html" class="btn btn-primary" style="font-size: 1rem; padding: 0.75rem 1.75rem;">
+        Access Application →
+      </a>
+      <a href="/register.html" class="btn btn-secondary" style="font-size: 1rem; padding: 0.75rem 1.75rem;">
+        Register New Account
+      </a>
+    </div>
+  </section>
+
+  <!-- Main Container: Features & Cloud Architecture Highlights -->
+  <div class="container" style="max-width: 1100px;">
+    
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <h2 style="font-size: 1.8rem; font-weight: 700;">AWS Cloud Lab Architecture & Practical Mapping</h2>
+      <p style="color: var(--text-muted);">How this application fulfills the Cloud Computing Laboratory syllabus</p>
+    </div>
+
+    <div class="cloud-grid">
+      <!-- EC2 Feature -->
+      <div class="cloud-feature-card">
+        <h3>💻 Amazon EC2 (Compute)</h3>
+        <p>
+          Hosts the Express.js application inside a public subnet. Demonstrates virtual machine provisioning, security group firewall rules (Port 80/3000/22), and reverse-proxying.
+        </p>
+        <div style="margin-top: 1rem;">
+          <span class="badge badge-category">Mapped to Exp 2</span>
+        </div>
+      </div>
+
+      <!-- RDS Feature -->
+      <div class="cloud-feature-card">
+        <h3>🗄 Amazon RDS MySQL (Database)</h3>
+        <p>
+          Manages users, hashed passwords, and financial transactions. Connects securely with the EC2 compute instance using parameterized SQL queries and managed automated backups.
+        </p>
+        <div style="margin-top: 1rem;">
+          <span class="badge badge-category">Mapped to Exp 11</span>
+        </div>
+      </div>
+
+      <!-- S3 Storage Feature -->
+      <div class="cloud-feature-card">
+        <h3>☁ Amazon S3 (Object Storage)</h3>
+        <p>
+          Receipts (PNG, JPG, PDF) are stored in a dedicated S3 bucket rather than bloated database BLOBs. Presigned signed URLs allow secure browser viewing without making the bucket public.
+        </p>
+        <div style="margin-top: 1rem;">
+          <span class="badge badge-category">Mapped to Exp 4</span>
+        </div>
+      </div>
+
+      <!-- S3 Versioning Feature -->
+      <div class="cloud-feature-card">
+        <h3>🕒 S3 Versioning (Data Protection)</h3>
+        <p>
+          Object versioning keeps historical revisions of overwritten or updated receipts. Protects against accidental file deletion and demonstrates rollback to earlier versions.
+        </p>
+        <div style="margin-top: 1rem;">
+          <span class="badge badge-category">Mapped to Exp 5</span>
+        </div>
+      </div>
+
+      <!-- IAM Feature -->
+      <div class="cloud-feature-card">
+        <h3>🔒 AWS IAM (Least Privilege)</h3>
+        <p>
+          The EC2 instance authenticates to Amazon S3 using an IAM Instance Profile (IAM Role) eliminating hard-coded credentials from source code or config files.
+        </p>
+        <div style="margin-top: 1rem;">
+          <span class="badge badge-category">Mapped to Exp 12</span>
+        </div>
+      </div>
+
+      <!-- VPC Feature -->
+      <div class="cloud-feature-card">
+        <h3>🌐 Amazon VPC (Network Isolation)</h3>
+        <p>
+          Configured with an Internet Gateway, public subnets for the web tier, and private subnets for the RDS database tier, securing database access from public internet intrusion.
+        </p>
+        <div style="margin-top: 1rem;">
+          <span class="badge badge-category">Mapped to Exp 8</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Demonstration Guide Box -->
+    <div style="background-color: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 2rem; margin: 3rem 0; box-shadow: var(--shadow-sm);">
+      <h3 style="margin-bottom: 0.75rem; color: var(--aws-squid);">🚀 Quick Viva & Lab Demo Instructions</h3>
+      <ol style="padding-left: 1.5rem; line-height: 1.8; color: var(--text-main); font-size: 0.95rem;">
+        <li>Log in using the demo account: <code>demo@cloudlab.edu</code> (Password: <code>Demo@1234</code>) or create a new user.</li>
+        <li>Add an expense or income entry with an attached receipt (JPG/PNG/PDF).</li>
+        <li>Inspect the stored transaction metadata in <strong>Amazon RDS</strong> and receipt file in <strong>Amazon S3</strong>.</li>
+        <li>Edit the transaction and upload a revised receipt to inspect <strong>S3 Object Versioning</strong>.</li>
+        <li>Click <strong>"Cloud Lab Info"</strong> on the dashboard to view real-time cloud diagnostic telemetry.</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>Cloud-Based Expense Tracker | B.Tech CSE Cloud Computing Lab Mini Project</p>
+    <p style="margin-top: 0.4rem; font-size: 0.75rem; color: #64748b;">
+      Demonstrating Amazon EC2, Amazon RDS, Amazon S3, S3 Versioning, IAM Roles & Amazon VPC
+    </p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+</body>
+</html>

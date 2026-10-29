@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transactions | Cloud-Based Expense Tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%200%22%20100%22%20100%22><text y=%22.9em%22 font-size=%2290%22>☁️</text></svg>">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <a href="/dashboard.html" class="nav-brand">
+      <span>☁️ ExpenseTracker</span>
+      <span class="aws-badge">AWS EC2 & RDS</span>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="/dashboard.html">Dashboard</a></li>
+      <li><a href="/transactions.html" class="active">Transactions</a></li>
+    </ul>
+
+    <div class="nav-user">
+      <div class="user-tag">
+        <span>👤</span>
+        <span id="nav-user-name">Student</span>
+      </div>
+      <button id="btn-logout" class="btn btn-sm btn-secondary">
+        Logout
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-title">
+        <h1>Transaction Records</h1>
+        <p>Filter, search, edit transactions, and manage receipts on Amazon S3</p>
+      </div>
+
+      <div>
+        <button class="btn btn-primary" onclick="openAddModal()">
+          + Add New Transaction
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filter-card">
+      <div class="filter-grid">
+        <!-- Type Filter -->
+        <div class="form-group">
+          <label for="filter-type">Type</label>
+          <select id="filter-type" class="form-control">
+            <option value="all">All Types</option>
+            <option value="income">Income Only</option>
+            <option value="expense">Expense Only</option>
+          </select>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="form-group">
+          <label for="filter-category">Category</label>
+          <select id="filter-category" class="form-control">
+            <option value="all">All Categories</option>
+            <option value="Food">Food</option>
+            <option value="Travel">Travel</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Education">Education</option>
+            <option value="Bills">Bills</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Healthcare">Healthcare</option>
+            <option value="Salary">Salary</option>
+            <option value="Investment">Investment</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <!-- Start Date Filter -->
+        <div class="form-group">
+          <label for="filter-start">From Date</label>
+          <input type="date" id="filter-start" class="form-control" />
+        </div>
+
+        <!-- End Date Filter -->
+        <div class="form-group">
+          <label for="filter-end">To Date</label>
+          <input type="date" id="filter-end" class="form-control" />
+        </div>
+
+        <!-- Keyword Search -->
+        <div class="form-group">
+          <label for="filter-search">Search Keyword</label>
+          <input type="text" id="filter-search" class="form-control" placeholder="Search description..." />
+        </div>
+
+        <!-- Reset Button -->
+        <div class="form-group">
+          <button id="btn-reset-filters" class="btn btn-secondary" style="height: 38px; width: 100%;">
+            ↺ Reset
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtered Summary Ribbon -->
+    <div style="background-color: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.85rem 1.25rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; font-size: 0.9rem;">
+      <div>
+        Showing: <strong id="filter-summary-count">0</strong> transactions
+      </div>
+      <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+        <div>Income: <strong id="filter-summary-income" style="color: var(--success);">₹0.00</strong></div>
+        <div>Expense: <strong id="filter-summary-expense" style="color: var(--danger);">₹0.00</strong></div>
+        <div>Net: <strong id="filter-summary-net" style="color: var(--primary);">₹0.00</strong></div>
+      </div>
+    </div>
+
+    <!-- Transactions Table Card -->
+    <div class="table-card">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Amount</th>
+              <th>Receipt (S3)</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="transactions-body">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal: Add / Edit Transaction -->
+  <div id="modal-transaction" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-tx-title">Add Transaction</h3>
+        <button class="modal-close" onclick="closeModal('modal-transaction')">&times;</button>
+      </div>
+
+      <form id="form-transaction" enctype="multipart/form-data">
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="tx-type">Transaction Type *</label>
+            <select id="tx-type" name="type" class="form-control" required>
+              <option value="expense" selected>Expense</option>
+              <option value="income">Income</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="tx-amount">Amount (₹) *</label>
+            <input type="number" id="tx-amount" name="amount" class="form-control" placeholder="e.g. 250.00" step="0.01" min="0.01" required />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="tx-category">Category *</label>
+            <select id="tx-category" name="category" class="form-control" required>
+              <option value="Food">Food</option>
+              <option value="Travel">Travel</option>
+              <option value="Shopping">Shopping</option>
+              <option value="Education">Education</option>
+              <option value="Bills">Bills</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Healthcare">Healthcare</option>
+              <option value="Salary">Salary</option>
+              <option value="Investment">Investment</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="tx-description">Description</label>
+            <input type="text" id="tx-description" name="description" class="form-control" placeholder="e.g. Flight ticket, Grocery" maxlength="255" />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="tx-date">Date *</label>
+            <input type="date" id="tx-date" name="transaction_date" class="form-control" required />
+          </div>
+
+          <div id="receipt-current-info" style="display: none; margin-bottom: 0.75rem; background: #fff7ed; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid #fed7aa;">
+          </div>
+
+          <div class="form-group">
+            <label for="tx-receipt">
+              Receipt Document (Amazon S3)
+              <small style="color: var(--text-light);">(JPG, PNG, PDF &le; 5MB)</small>
+            </label>
+            <input type="file" id="tx-receipt" name="receipt" class="form-control" accept=".jpg,.jpeg,.png,.pdf" />
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-transaction')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Transaction</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Receipt Preview -->
+  <div id="modal-receipt-preview" class="modal-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3>☁ Amazon S3 Receipt Preview</h3>
+        <button class="modal-close" onclick="closeModal('modal-receipt-preview')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+          <strong>S3 Object Key:</strong> <code id="receipt-s3-key"></code>
+        </div>
+        <div id="receipt-preview-body">
+          <!-- Render image or iframe -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a id="receipt-download-btn" href="#" target="_blank" class="btn btn-primary">
+          ⬇ Download Original
+        </a>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-receipt-preview')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Amazon S3 Versioning History (Lab Practical 5) -->
+  <div id="modal-s3-versioning" class="modal-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3>🕒 Amazon S3 Object Versioning (Lab Practical 5)</h3>
+        <button class="modal-close" onclick="closeModal('modal-s3-versioning')">&times;</button>
+      </div>
+      <div id="s3-versions-content" class="modal-body">
+        <!-- Render S3 Versioning details -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-s3-versioning')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Cloud-Based Expense Tracker | B.Tech CSE Cloud Computing Lab Mini Project</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/transactions.js"></script>
+</body>
+</html>
