@@ -56,6 +56,12 @@ async function initMySQLSchema(connection) {
       CONSTRAINT chk_positive_amount CHECK (amount > 0)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   `);
+
+  await connection.query(`
+    INSERT INTO users (id, name, email, password_hash)
+    VALUES (1, 'Cloud Lab Student', 'demo@cloudlab.edu', '$2a$10$wQ9K48E0dJ6ZpZ0PjB7w1uB1Q1Rsm6G7OqYxG5k7cT5n3FkRz3F2e')
+    ON DUPLICATE KEY UPDATE name=VALUES(name);
+  `);
 }
 
 // Initialize SQLite schema for offline development mode
@@ -68,6 +74,9 @@ function initSqliteSchema(db) {
       password_hash TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    INSERT OR IGNORE INTO users (id, name, email, password_hash)
+    VALUES (1, 'Cloud Lab Student', 'demo@cloudlab.edu', 'mock_hash');
 
     CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

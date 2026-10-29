@@ -17,18 +17,18 @@
     </a>
 
     <ul class="nav-links">
-      <li><a href="/dashboard.html">Dashboard</a></li>
+      <li><a href="/">Dashboard</a></li>
       <li><a href="/transactions.html" class="active">Transactions</a></li>
     </ul>
 
     <div class="nav-user">
+      <button id="btn-cloud-info" class="btn btn-sm btn-aws" onclick="openCloudInfoModal()" title="Inspect Cloud Architecture">
+        ☁ Cloud Lab Info
+      </button>
       <div class="user-tag">
         <span>👤</span>
-        <span id="nav-user-name">Student</span>
+        <span id="nav-user-name">Cloud Lab Student</span>
       </div>
-      <button id="btn-logout" class="btn btn-sm btn-secondary">
-        Logout
-      </button>
     </div>
   </nav>
 
@@ -252,12 +252,28 @@
     </div>
   </div>
 
+  <!-- Modal: Cloud Architecture Diagnostics & Practical Mapping -->
+  <div id="modal-cloud-info" class="modal-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3>AWS Cloud Computing Lab Diagnostics</h3>
+        <button class="modal-close" onclick="closeModal('modal-cloud-info')">&times;</button>
+      </div>
+      <div id="cloud-info-content" class="modal-body">
+        <!-- Dynamically rendered -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-cloud-info')">Close</button>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <p>Cloud-Based Expense Tracker | B.Tech CSE Cloud Computing Lab Mini Project</p>
   </footer>
 
   <script src="/js/api.js"></script>
-  <script src="/js/auth.js"></script>
+  <script src="/js/dashboard.js"></script>
   <script src="/js/transactions.js"></script>
 </body>
 </html>
