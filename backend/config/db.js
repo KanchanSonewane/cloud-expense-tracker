@@ -15,6 +15,7 @@ let sqliteDb = null;
 let activeDbType = 'mysql'; // 'mysql' (Amazon RDS) or 'sqlite' (local fallback)
 let dbStatus = 'connecting';
 let lastDbError = null;
+let initPromise = null;
 
 const targetDbName = process.env.DB_NAME || 'cloud_expense_tracker';
 
@@ -65,15 +66,38 @@ async function initMySQLSchema(connection) {
     VALUES (1, 'Cloud Lab Student', 'demo@cloudlab.edu', '$2a$10$wQ9K48E0dJ6ZpZ0PjB7w1uB1Q1Rsm6G7OqYxG5k7cT5n3FkRz3F2e')
     ON DUPLICATE KEY UPDATE name=VALUES(name);
   `);
+
+  try {
+    const [rows] = await connection.query('SELECT COUNT(*) AS count FROM transactions WHERE user_id = 1');
+    if (rows && rows[0] && rows[0].count === 0) {
+      console.log('[Auto-Seed] Pre-populating Amazon RDS MySQL with cleaned personal sheet transactions...');
+      const cleaned = require('../../database/cleaned-transactions');
+      for (const tx of cleaned) {
+        await connection.query(
+          'INSERT INTO transactions (user_id, type, amount, category, description, transaction_date) VALUES (?, ?, ?, ?, ?, ?)',
+          [1, tx.type, tx.amount, tx.category, tx.description, tx.date]
+        );
+      }
+      console.log(`[Auto-Seed] Successfully loaded ${cleaned.length} transactions into Amazon RDS!`);
+    }
+  } catch (seedErr) {
+    console.warn('[Auto-Seed Notice]:', seedErr.message);
+  }
 }
 
 // Convert MySQL DATE_SUB/CURDATE syntax or parameter placeholders if executing on SQLite
 function adaptQueryForSqlite(sql) {
-  return sql
+  let res = sql
     .replace(/CURDATE\(\)/gi, "date('now')")
     .replace(/DATE_SUB\(date\('now'\),\s*INTERVAL\s*(\d+)\s*DAY\)/gi, "date('now', '-$1 days')")
     .replace(/DATE_SUB\(CURDATE\(\),\s*INTERVAL\s*(\d+)\s*DAY\)/gi, "date('now', '-$1 days')")
     .replace(/NOW\(\)/gi, "datetime('now')");
+
+  if (/ON DUPLICATE KEY UPDATE/i.test(res)) {
+    res = res.replace(/ON DUPLICATE KEY UPDATE[\s\S]*$/i, "");
+    res = res.replace(/^INSERT INTO/i, "INSERT OR IGNORE INTO");
+  }
+  return res;
 }
 
 function executeSqliteQuery(sql, params = []) {
@@ -96,105 +120,119 @@ function executeSqliteQuery(sql, params = []) {
 }
 
 // Setup and connect
-async function initializeDatabase() {
-  const forceSqlite = process.env.DB_CLIENT === 'sqlite' || process.env.USE_LOCAL_SQLITE === 'true';
+function initializeDatabase() {
+  if (initPromise) return initPromise;
 
-  if (!forceSqlite) {
-    try {
-      console.log(`[Amazon RDS / MySQL] Connecting to ${config.host}:${config.port}...`);
+  initPromise = (async () => {
+    const forceSqlite = process.env.DB_CLIENT === 'sqlite' || process.env.USE_LOCAL_SQLITE === 'true';
 
-      // Step 1: Connect to MySQL server without forcing a database name
-      // This allows auto-creating the database if RDS was launched without an initial DB
-      let preConn = null;
+    if (!forceSqlite) {
       try {
-        preConn = await mysql.createConnection({
-          host: config.host,
-          port: config.port,
-          user: config.user,
-          password: config.password,
-          connectTimeout: 7000,
-        });
+        console.log(`[Amazon RDS / MySQL] Connecting to ${config.host}:${config.port}...`);
 
-        await preConn.query(`CREATE DATABASE IF NOT EXISTS \`${targetDbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
-        await preConn.end();
-      } catch (preErr) {
-        // If connecting without DB failed, continue and let createPool attempt connection
-        console.warn(`[Amazon RDS Notice] Pre-connection check: ${preErr.message}`);
+        let preConn = null;
+        try {
+          preConn = await mysql.createConnection({
+            host: config.host,
+            port: config.port,
+            user: config.user,
+            password: config.password,
+            connectTimeout: 7000,
+          });
+
+          await preConn.query(`CREATE DATABASE IF NOT EXISTS \`${targetDbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+          await preConn.end();
+        } catch (preErr) {
+          console.warn(`[Amazon RDS Notice] Pre-connection check: ${preErr.message}`);
+        }
+
+        pool = mysql.createPool(config);
+        const connection = await pool.getConnection();
+        console.log(`[Amazon RDS / MySQL] Successfully connected to database "${config.database}" on ${config.host}!`);
+
+        await initMySQLSchema(connection);
+        connection.release();
+
+        activeDbType = 'mysql';
+        dbStatus = 'connected';
+        lastDbError = null;
+        return;
+      } catch (err) {
+        lastDbError = err.message;
+        console.error(`[Amazon RDS / MySQL Error] ${err.message}`);
+        console.log('[DATABASE NOTICE] Attempting local SQLite fallback for offline development...');
+      }
+    }
+
+    try {
+      const { DatabaseSync } = require('node:sqlite');
+      const dbDir = path.join(__dirname, '..', '..', 'database');
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+      const dbPath = path.join(dbDir, 'expense_tracker.sqlite');
+      sqliteDb = new DatabaseSync(dbPath);
+      sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          password_hash TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        INSERT OR IGNORE INTO users (id, name, email, password_hash)
+        VALUES (1, 'Cloud Lab Student', 'demo@cloudlab.edu', 'mock_hash');
+
+        CREATE TABLE IF NOT EXISTS transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+          amount REAL NOT NULL CHECK(amount > 0),
+          category TEXT NOT NULL,
+          description TEXT,
+          transaction_date TEXT NOT NULL,
+          receipt_key TEXT,
+          receipt_filename TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+
+      const countRow = sqliteDb.prepare('SELECT COUNT(*) AS count FROM transactions WHERE user_id = 1').get();
+      if (countRow && countRow.count === 0) {
+        const cleaned = require('../../database/cleaned-transactions');
+        const insertStmt = sqliteDb.prepare('INSERT INTO transactions (user_id, type, amount, category, description, transaction_date) VALUES (?, ?, ?, ?, ?, ?)');
+        for (const tx of cleaned) {
+          insertStmt.run(1, tx.type, tx.amount, tx.category, tx.description, tx.date);
+        }
+        console.log(`[Auto-Seed] Loaded ${cleaned.length} personal transactions into SQLite.`);
       }
 
-      // Step 2: Initialize connection pool
-      pool = mysql.createPool(config);
-      const connection = await pool.getConnection();
-      console.log(`[Amazon RDS / MySQL] Successfully connected to database "${config.database}" on ${config.host}!`);
-
-      // Step 3: Initialize schema & default user
-      await initMySQLSchema(connection);
-      connection.release();
-
-      activeDbType = 'mysql';
-      dbStatus = 'connected';
-      lastDbError = null;
-      return;
-    } catch (err) {
-      lastDbError = err.message;
-      console.error(`[Amazon RDS / MySQL Error] ${err.message}`);
-      console.log('[DATABASE NOTICE] Attempting local SQLite fallback for offline development...');
+      activeDbType = 'sqlite';
+      dbStatus = 'connected (local fallback)';
+      console.log(`[Database SQLite] Local database active at: ${dbPath}`);
+    } catch (sqliteErr) {
+      dbStatus = `Database connection failed. ${lastDbError || sqliteErr.message}`;
+      console.error('[Database Status] Could not connect to RDS MySQL:', lastDbError || sqliteErr.message);
     }
-  }
+  })();
 
-  // Attempt SQLite fallback (available on Node.js 22+)
-  try {
-    const { DatabaseSync } = require('node:sqlite');
-    const dbDir = path.join(__dirname, '..', '..', 'database');
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
-    }
-    const dbPath = path.join(dbDir, 'expense_tracker.sqlite');
-    sqliteDb = new DatabaseSync(dbPath);
-    sqliteDb.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      INSERT OR IGNORE INTO users (id, name, email, password_hash)
-      VALUES (1, 'Cloud Lab Student', 'demo@cloudlab.edu', 'mock_hash');
-
-      CREATE TABLE IF NOT EXISTS transactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-        amount REAL NOT NULL CHECK(amount > 0),
-        category TEXT NOT NULL,
-        description TEXT,
-        transaction_date TEXT NOT NULL,
-        receipt_key TEXT,
-        receipt_filename TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-    `);
-    activeDbType = 'sqlite';
-    dbStatus = 'connected (local fallback)';
-    console.log(`[Database SQLite] Local database active at: ${dbPath}`);
-  } catch (sqliteErr) {
-    dbStatus = `Database connection failed. ${lastDbError || sqliteErr.message}`;
-    console.error('[Database Status] Could not connect to RDS MySQL:', lastDbError || sqliteErr.message);
-  }
+  return initPromise;
 }
 
 // Unified query function
 async function query(sql, params = []) {
+  if (initPromise) {
+    await initPromise;
+  }
+
   if (activeDbType === 'mysql' && pool) {
     return await pool.query(sql, params);
   } else if (activeDbType === 'sqlite' && sqliteDb) {
     return executeSqliteQuery(sql, params);
   } else {
-    // If database connection is failing, return a descriptive error so user knows what to fix in .env
     throw new Error(`Database Error: ${lastDbError || 'Database not connected. Please verify DB_PASSWORD and DB_HOST in your .env file on EC2.'}`);
   }
 }
