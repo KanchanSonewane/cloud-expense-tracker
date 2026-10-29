@@ -72,7 +72,7 @@ async function loadSummaryCards() {
       receiptsElem.textContent = `${data.receiptsStored} receipts stored in S3`;
     }
   } catch (err) {
-    showToast('Failed to load financial summary.', 'error');
+    showToast(err.message || 'Failed to load financial summary.', 'error');
   }
 }
 
